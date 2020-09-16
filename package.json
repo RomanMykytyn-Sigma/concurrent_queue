@@ -1,0 +1,17 @@
+{
+  "name": "concurent_queue",
+  "version": "1.0.0",
+  "description": "test_task",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "Roman Mykytyn",
+  "license": "ISC",
+  "devDependencies": {
+    "jest": "^26.4.2"
+  },
+  "dependencies": {
+    "delay": "^4.4.0"
+  }
+}
