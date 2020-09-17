@@ -40,7 +40,7 @@ test('.push(), concurrency = 1', (done) => {
   const DELAY = 50;
   const queue = new ConcurrencyQueue(CONCURRENCY);
   
-  const input = new Array(NUMBER_TASKS).fill(0).map((i, index) => new Promise((resolve, reject) => {
+  const input = Array.from({length: NUMBER_TASKS}, (i, index) => new Promise((resolve, reject) => {
     queue.push(async () => {
       try {
         if (index) {
@@ -67,7 +67,7 @@ test('.push(), concurrency = 5', (done) => {
   const queue = new ConcurrencyQueue(CONCURRENCY);
   let running = 0;
 
-  const input = new Array(NUMBER_TASKS).fill(0).map(() => new Promise((resolve, reject) => {
+  const input = Array.from({length: NUMBER_TASKS}, () => new Promise((resolve, reject) => {
     queue.push(async () => {
       try {
         running++;
@@ -96,7 +96,7 @@ test('.pushAll(), concurrency = 1', (done) => {
   const queue = new ConcurrencyQueue(CONCURRENCY);
   
   const input = new Promise((resolve, reject) => {
-    const tasks = new Array(NUMBER_TASKS).fill(0).map((i, index) => async () => {
+    const tasks = Array.from({length: NUMBER_TASKS}, (i, index) => async () => {
       try {
         if (index) {
           expect(queue.queue.length).toBe(NUMBER_TASKS - 1 - index);
