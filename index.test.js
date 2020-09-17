@@ -1,52 +1,118 @@
 const ConcurrencyQueue = require('./index');
 const delay = require('delay');
 
-test('.push()', () => {
+
+test('.push()', (done) => {
   const queue = new ConcurrencyQueue();
+  const input = new Promise((resolve, reject) => {
+    queue.push(() => {
+      try {
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  })
+
+  return input.then(() => {
+    expect(queue.queue.length).toBe(0);
+    expect(queue.count).toBe(0);
+    expect(queue.stopped).toBe(true);
+    done()
+  })
+  .catch(err => {done(err)});
+});
+
+
+test('.push(), autostart - off', () => {
+  const queue = new ConcurrencyQueue(0, false);
   queue.push(() => true);
-  expect(queue.queue.length).toBe(0);
-  expect(queue.count).toBe(1);
+  
+  expect(queue.queue.length).toBe(1);
+  expect(queue.count).toBe(0);
   expect(queue.stopped).toBe(true);
 });
+
 
 test('.push(), concurrency = 1', (done) => {
-  const concurrency = 1;
-  const queue = new ConcurrencyQueue(concurrency);
+  const CONCURRENCY = 1;
+  const NUMBER_TASKS = 10;
+  const DELAY = 50;
+  const queue = new ConcurrencyQueue(CONCURRENCY);
   
-  for (let i = 0; i < 10; i++) {
-    const task = async () => {
+  const input = new Array(NUMBER_TASKS).fill(0).map((i, index) => new Promise((resolve, reject) => {
+    queue.push(async () => {
       try {
-        expect(queue.queue.length).toBe(i);
-        expect(queue.count).toBeLessThanOrEqual(concurrency);
+        if (index) {
+          expect(queue.queue.length).toBe(NUMBER_TASKS - 1 - index);
+        }
+        expect(queue.count).toBeLessThanOrEqual(CONCURRENCY);
         expect(queue.stopped).toBe(false);
-        done();
-        await delay(50);
+        await delay(DELAY);
+        resolve();
       } catch (error) {
-        done(error);
+        reject(error);
       }
-    };
-    queue.push(task);
-  }
+    })
+  }));
 
-  expect(queue.queue.length).toBe(9);
-  expect(queue.count).toBeLessThanOrEqual(concurrency);
-  expect(queue.stopped).toBe(true);
+	return Promise.all(input).then(() => {done()}).catch(err => {done(err)});
 });
 
+
 test('.push(), concurrency = 5', (done) => {
-  const concurrency = 5;
-  const queue = new ConcurrencyQueue(concurrency);
+  const CONCURRENCY = 5;
+  const NUMBER_TASKS = 100;
+  const DELAY = 20;
+  const queue = new ConcurrencyQueue(CONCURRENCY);
   let running = 0;
 
-	new Array(100).fill(0).forEach( () => queue.push( () => {
-    try {
-      running++;
-      expect(running).toBeLessThanOrEqual(concurrency);
-      expect(queue.count).toBeLessThanOrEqual(concurrency);
-      running--;
-      done();
-    } catch (error) {
-      done(error);
-    }
-	}));
+  const input = new Array(NUMBER_TASKS).fill(0).map(() => new Promise((resolve, reject) => {
+    queue.push(async () => {
+      try {
+        running++;
+        expect(running).toBeLessThanOrEqual(CONCURRENCY);
+        expect(queue.count).toBeLessThanOrEqual(CONCURRENCY);
+        if (running <= CONCURRENCY) {
+          expect(queue.stopped).toBe(false);
+        }
+        await delay(DELAY);
+        running--;
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    })
+  }));
+
+	return Promise.all(input).then(() => {done()}).catch(err => {done(err)});
+});
+
+
+test('.pushAll(), concurrency = 1', (done) => {
+  const CONCURRENCY = 1;
+  const NUMBER_TASKS = 10;
+  const DELAY = 50;
+  const queue = new ConcurrencyQueue(CONCURRENCY);
+  
+  const input = new Promise((resolve, reject) => {
+    const tasks = new Array(NUMBER_TASKS).fill(0).map((i, index) => async () => {
+      try {
+        if (index) {
+          expect(queue.queue.length).toBe(NUMBER_TASKS - 1 - index);
+        }
+        expect(queue.count).toBeLessThanOrEqual(CONCURRENCY);
+        expect(queue.stopped).toBe(false);
+        await delay(DELAY);
+        if (index === NUMBER_TASKS - 1) {
+          resolve();
+        }
+      } catch (error) {
+        reject(error);
+      }
+    });
+    queue.pushAll(tasks)
+  })
+
+	return input.then(() => {done()}).catch(err => {done(err)});
 });
